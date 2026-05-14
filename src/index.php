@@ -18,6 +18,13 @@
         <div class="hero-content text-center">
             <div class="max-w-md">
                 <div class="flex w-full flex-col">
+
+                    <div role="alert" class="alert alert-warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Contraeña o Correo Inválido</span>
+                    </div>
  
                     <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
                         <legend class="fieldset-legend">Inicar Sesión</legend>
