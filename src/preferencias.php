@@ -14,9 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $usuario = trim($_POST['usuario'] ?? '');
         $usuario = substr(htmlspecialchars($usuario, ENT_QUOTES, 'UTF-8'), 0, 50);
 
-        setcookie('pref_tema',    $tema,    $expira, '/');
-        setcookie('pref_idioma',  $idioma,  $expira, '/');
-        setcookie('pref_usuario', $usuario, $expira, '/');
+        // RF-3: httponly = true (7mo parámetro)
+        setcookie('pref_tema',    $tema,    $expira, '/', '', false, true);
+        setcookie('pref_idioma',  $idioma,  $expira, '/', '', false, true);
+        setcookie('pref_usuario', $usuario, $expira, '/', '', false, true);
 
         $mensaje     = ($idioma === 'en') ? 'Preferences saved for 30 days.' : 'Preferencias guardadas por 30 días.';
         $tipo_alerta = 'success';
@@ -28,10 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['borrar'])) {
-        // Eliminar cookies con fecha en el pasado
-        setcookie('pref_tema',    '', time() - 3600, '/');
-        setcookie('pref_idioma',  '', time() - 3600, '/');
-        setcookie('pref_usuario', '', time() - 3600, '/');
+        // RF-3: httponly = true también al borrar
+        setcookie('pref_tema',    '', time() - 3600, '/', '', false, true);
+        setcookie('pref_idioma',  '', time() - 3600, '/', '', false, true);
+        setcookie('pref_usuario', '', time() - 3600, '/', '', false, true);
         unset($_COOKIE['pref_tema'], $_COOKIE['pref_idioma'], $_COOKIE['pref_usuario']);
 
         $mensaje     = 'Preferencias eliminadas.';
