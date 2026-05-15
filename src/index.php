@@ -57,7 +57,6 @@ $tx = $t[$idioma_actual];
             <div class="max-w-md">
                 <div class="flex w-full flex-col gap-3">
 
-                    <!-- ── Bienvenida si hay nombre de usuario guardado ── -->
                     <?php if ($usuario_actual !== ''): ?>
                     <div role="alert" class="alert alert-info">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
@@ -67,7 +66,6 @@ $tx = $t[$idioma_actual];
                     </div>
                     <?php endif; ?>
 
-                    <!-- ── Alerta de error (mostrar solo cuando sea necesario) ── -->
                     <?php if (isset($_GET['error']) && $_GET['error'] === '1'): ?>
                     <div role="alert" class="alert alert-warning">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
@@ -77,7 +75,6 @@ $tx = $t[$idioma_actual];
                     </div>
                     <?php endif; ?>
 
-                    <!-- ── Formulario de login ── -->
                     <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
                         <legend class="fieldset-legend"><?= $tx['legend'] ?></legend>
 
@@ -90,18 +87,16 @@ $tx = $t[$idioma_actual];
                         <button class="btn btn-neutral mt-4"><?= $tx['btn_ingresar'] ?></button>
                     </fieldset>
 
-                    <!-- ── Controles de tema e idioma + enlace a preferencias ── -->
                     <div class="flex items-center justify-between gap-2 flex-wrap">
 
-                        <!-- Toggle tema -->
                         <label class="toggle text-base-content" title="<?= $idioma_actual === 'es' ? 'Cambiar tema' : 'Toggle theme' ?>">
                             <input
                                 type="checkbox"
+                                id="toggle-tema"
                                 value="synthwave"
                                 class="theme-controller"
                                 <?= $tema_actual === 'synthwave' ? 'checked' : '' ?>
                             />
-                            <!-- Sol -->
                             <svg aria-label="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                                 <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor">
                                     <circle cx="12" cy="12" r="4"></circle>
@@ -111,7 +106,6 @@ $tx = $t[$idioma_actual];
                                     <path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>
                                 </g>
                             </svg>
-                            <!-- Luna -->
                             <svg aria-label="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                                 <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor">
                                     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
@@ -119,14 +113,12 @@ $tx = $t[$idioma_actual];
                             </svg>
                         </label>
 
-                        <!-- Toggle idioma -->
                         <label class="swap font-bold">
-                            <input type="checkbox" <?= $idioma_actual === 'en' ? 'checked' : '' ?> />
+                            <input type="checkbox" id="toggle-idioma" <?= $idioma_actual === 'en' ? 'checked' : '' ?> />
                             <div class="swap-on">EN</div>
                             <div class="swap-off">ES</div>
                         </label>
 
-                        <!-- Enlace a preferencias -->
                         <a href="preferencias.php" class="btn btn-sm btn-ghost">
                             ⚙️ <?= $tx['preferencias'] ?>
                         </a>
@@ -136,5 +128,38 @@ $tx = $t[$idioma_actual];
             </div>
         </div>
     </div>
+
+    <script>
+        // Función auxiliar para crear la cookie con 30 días de duración
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
+
+        // Evento para el switch de Tema
+        const toggleTema = document.getElementById('toggle-tema');
+        if (toggleTema) {
+            toggleTema.addEventListener('change', function() {
+                const nuevoTema = this.checked ? 'synthwave' : 'light';
+                setCookie('pref_tema', nuevoTema, 30);
+                document.documentElement.setAttribute('data-theme', nuevoTema); // Fuerza el cambio en la etiqueta html
+            });
+        }
+
+        // Evento para el switch de Idioma
+        const toggleIdioma = document.getElementById('toggle-idioma');
+        if (toggleIdioma) {
+            toggleIdioma.addEventListener('change', function() {
+                const nuevoIdioma = this.checked ? 'en' : 'es';
+                setCookie('pref_idioma', nuevoIdioma, 30);
+                window.location.reload(); // Recarga la página para que PHP aplique el nuevo idioma
+            });
+        }
+    </script>
 </body>
 </html>
