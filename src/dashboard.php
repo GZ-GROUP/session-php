@@ -1,51 +1,81 @@
 <?php
+session_start();
 
-require_once "./config/session.php";
-
-if (!isset($_SESSION['nombre'])) {
-    header("Location: login.php");
+// RF-2: Dashboard protegido; si no hay sesión redirigir a login
+if (!isset($_SESSION['usuario'])) {
+    header('Location: login.php');
     exit;
 }
 
-$_SESSION['visitas']++;
-?>
+// RF-2: Contador de visitas a la página
+$_SESSION['visitas'] = ($_SESSION['visitas'] ?? 0) + 1;
 
+// RF-3: htmlspecialchars() en toda salida de datos de usuario
+$nombre  = htmlspecialchars($_SESSION['usuario']);
+$rol     = htmlspecialchars($_SESSION['rol']);
+$inicio  = htmlspecialchars($_SESSION['inicio']);
+$visitas = (int) $_SESSION['visitas'];
+
+// Leer preferencias de cookies
+$tema   = htmlspecialchars($_COOKIE['tema']   ?? 'claro');
+$idioma = htmlspecialchars($_COOKIE['idioma'] ?? 'es');
+?>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="<?= $idioma ?>">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="estilos.php">
 </head>
-<body class="p-10 bg-base-200 min-h-screen">
+<body class="tema-<?= $tema ?>">
 
-<div class="card bg-base-100 shadow-xl p-8">
+<div class="contenedor">
 
-    <h1 class="text-3xl font-bold mb-4">
-        Bienvenido
-        <?= htmlspecialchars($_SESSION['nombre']) ?>
-    </h1>
+    <!-- RF-2: Bienvenida con nombre, rol y contador de visitas -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="subtitulo">
+                Bienvenido, <strong><?= $nombre ?></strong>
+                &mdash; Rol: <strong><?= $rol ?></strong>
+            </p>
+        </div>
+        <a href="logout.php" class="btn btn-logout">Cerrar sesión</a>
+    </header>
 
-    <p class="mb-2">
-        <strong>Rol:</strong>
-        <?= htmlspecialchars($_SESSION['rol']) ?>
-    </p>
+    <div class="tarjetas">
 
-    <p class="mb-2">
-        <strong>Inicio de sesión:</strong>
-        <?= htmlspecialchars($_SESSION['inicio']) ?>
-    </p>
+        <div class="tarjeta">
+            <span class="icono">👤</span>
+            <h2>Usuario</h2>
+            <p><?= $nombre ?></p>
+        </div>
 
-    <p class="mb-5">
-        <strong>Visitas:</strong>
-        <?= htmlspecialchars($_SESSION['visitas']) ?>
-    </p>
+        <div class="tarjeta">
+            <span class="icono">🏷️</span>
+            <h2>Rol</h2>
+            <p><?= $rol ?></p>
+        </div>
 
-    <a href="logout.php" class="btn btn-error w-fit">
-        Cerrar Sesión
-    </a>
+        <div class="tarjeta">
+            <span class="icono">🕐</span>
+            <h2>Sesión iniciada</h2>
+            <p><?= $inicio ?></p>
+        </div>
+
+        <div class="tarjeta">
+            <span class="icono">🔢</span>
+            <h2>Visitas a esta página</h2>
+            <p class="numero-grande"><?= $visitas ?></p>
+        </div>
+
+    </div>
+
+    <div class="botones" style="margin-top:2rem;">
+        <a href="preferencias.php" class="btn">Preferencias</a>
+        <a href="logout.php" class="btn btn-borrar">Cerrar sesión</a>
+    </div>
 
 </div>
 
