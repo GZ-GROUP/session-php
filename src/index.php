@@ -56,6 +56,7 @@ $idioma_label = $idioma === 'en'        ? 'English'            : 'Español';
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body class="min-h-screen bg-base-200 flex items-center justify-center p-4">
 

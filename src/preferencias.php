@@ -97,6 +97,7 @@ $tx = $t[$idioma_actual];
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Clear+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
 <div class="hero bg-base-200 min-h-screen">
