@@ -1,5 +1,25 @@
-<!DOCTYPE html>
+<?php
+session_start();
 
+// RF-2: Proteger dashboard
+if (!isset($_SESSION['nombre'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// RF-2: Contador de visitas
+if (!isset($_SESSION['visitas'])) {
+    $_SESSION['visitas'] = 1;
+} else {
+    $_SESSION['visitas']++;
+}
+
+// RF-3: htmlspecialchars
+$nombre  = htmlspecialchars($_SESSION['nombre']);
+$rol     = htmlspecialchars($_SESSION['rol']);
+$visitas = (int) $_SESSION['visitas'];
+?>
+<!DOCTYPE html>
 <html lang="es" data-theme="customTheme">
 <head>
     <meta charset="UTF-8">
@@ -25,11 +45,11 @@
                     </figure>
                     <div class="card-body">
                         <h2 class="card-title">
-                        Nombre
-                        <div class="badge badge-secondary">Rol</div>
+                            <?php echo $nombre; ?>
+                            <div class="badge badge-secondary"><?php echo $rol; ?></div>
                         </h2>                    
-                        <p>Has visitado el sitio: <span id="visitCount">0</span> veces</p>
-                        <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-soft btn-secondary">Cerrar Sesión</button>
+                        <p>Has visitado el sitio: <span id="visitCount"><?php echo $visitas; ?></span> veces</p>
+                        <a href="logout.php" class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-soft btn-secondary">Cerrar Sesión</a>
                     </div>
                 </div>
                 <div class="card-actions justify-end">
@@ -47,9 +67,8 @@
                         <div class="swap-off">ES</div>
                     </label>
                 </div>
-                 
-            </div>
-                      
+            </div>      
         </div>
     </div>
 </body>
+</html>
