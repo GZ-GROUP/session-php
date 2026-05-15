@@ -1,283 +1,108 @@
 <?php
-// ─── Dependencias ──────────────────────────────────────────────────────────
-require_once "./config/db.php";
 require_once "./config/session.php";
 
-// Si ya hay sesión activa, ir al dashboard directamente
-if (isset($_SESSION['nombre'])) {
-    header("Location: dashboard.php");
+// RF-2: Dashboard protegido — clave de sesión alineada con login.php ($_SESSION['nombre'])
+if (!isset($_SESSION['nombre'])) {
+    header('Location: login.php');
     exit;
 }
 
-// ─── Leer cookies de preferencias (tema / idioma) ─────────────────────────
+// RF-2: Contador de visitas a la página
+$_SESSION['visitas'] = ($_SESSION['visitas'] ?? 0) + 1;
+
+// RF-3: htmlspecialchars() en toda salida de datos de usuario
+// ✅ Usa 'nombre', no 'usuario' — debe coincidir con lo que guarda login.php
+$nombre  = htmlspecialchars($_SESSION['nombre'], ENT_QUOTES, 'UTF-8');
+$rol     = htmlspecialchars($_SESSION['rol']    ?? 'usuario', ENT_QUOTES, 'UTF-8');
+$inicio  = htmlspecialchars($_SESSION['inicio'] ?? '—', ENT_QUOTES, 'UTF-8');
+$visitas = (int) $_SESSION['visitas'];
+
+// Leer preferencias de cookies (claves corregidas: pref_tema / pref_idioma)
 $tema   = in_array($_COOKIE['pref_tema']   ?? '', ['light', 'synthwave'])
         ? $_COOKIE['pref_tema'] : 'light';
 $idioma = in_array($_COOKIE['pref_idioma'] ?? '', ['es', 'en'])
         ? $_COOKIE['pref_idioma'] : 'es';
-
-// ─── Textos bilingües ──────────────────────────────────────────────────────
-$textos = [
-    'es' => [
-        'titulo'         => 'Crear cuenta',
-        'subtitulo'      => 'Regístrate para acceder al sistema',
-        'lbl_nombre'     => 'Nombre completo',
-        'ph_nombre'      => 'Tu nombre',
-        'lbl_correo'     => 'Correo electrónico',
-        'ph_correo'      => 'correo@ejemplo.com',
-        'lbl_pass'       => 'Contraseña',
-        'ph_pass'        => 'Mínimo 8 caracteres',
-        'lbl_confirmar'  => 'Confirmar contraseña',
-        'ph_confirmar'   => 'Repite tu contraseña',
-        'btn_registrar'  => 'Crear cuenta',
-        'ya_cuenta'      => '¿Ya tienes cuenta?',
-        'ir_login'       => 'Iniciar sesión',
-        'ir_login_btn'   => 'Ir al login',
-        // Errores
-        'err_vacios'     => 'Todos los campos son obligatorios.',
-        'err_nombre'     => 'El nombre solo puede contener letras y espacios (máx. 100 caracteres).',
-        'err_correo'     => 'El formato del correo electrónico no es válido.',
-        'err_pass_corta' => 'La contraseña debe tener al menos 8 caracteres.',
-        'err_pass_match' => 'Las contraseñas no coinciden.',
-        'err_duplicado'  => 'Ese correo ya está registrado. ¿Quieres iniciar sesión?',
-        'err_db'         => 'Error interno al guardar. Intenta de nuevo.',
-        // Éxito
-        'ok_msg'         => '¡Cuenta creada con éxito! Ya puedes iniciar sesión.',
-    ],
-    'en' => [
-        'titulo'         => 'Create account',
-        'subtitulo'      => 'Sign up to access the system',
-        'lbl_nombre'     => 'Full name',
-        'ph_nombre'      => 'Your name',
-        'lbl_correo'     => 'Email address',
-        'ph_correo'      => 'email@example.com',
-        'lbl_pass'       => 'Password',
-        'ph_pass'        => 'At least 8 characters',
-        'lbl_confirmar'  => 'Confirm password',
-        'ph_confirmar'   => 'Repeat your password',
-        'btn_registrar'  => 'Create account',
-        'ya_cuenta'      => 'Already have an account?',
-        'ir_login'       => 'Log in',
-        'ir_login_btn'   => 'Go to login',
-        // Errors
-        'err_vacios'     => 'All fields are required.',
-        'err_nombre'     => 'Name can only contain letters and spaces (max 100 chars).',
-        'err_correo'     => 'The email address format is not valid.',
-        'err_pass_corta' => 'Password must be at least 8 characters.',
-        'err_pass_match' => 'Passwords do not match.',
-        'err_duplicado'  => 'That email is already registered. Want to log in?',
-        'err_db'         => 'Internal error while saving. Please try again.',
-        // Success
-        'ok_msg'         => 'Account created successfully! You can now log in.',
-    ],
-];
-$t = $textos[$idioma] ?? $textos['es'];
-
-// ─── Estado del formulario ─────────────────────────────────────────────────
-$error      = '';
-$success    = false;
-$val_nombre = '';
-$val_correo = '';
-
-// ─── Procesar POST ─────────────────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $nombre    = trim($_POST['nombre']    ?? '');
-    $correo    = trim($_POST['correo']    ?? '');
-    $password  = $_POST['password']       ?? '';
-    $confirmar = $_POST['confirmar']      ?? '';
-
-    // Preservar para repoblar el formulario en caso de error
-    $val_nombre = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
-    $val_correo = htmlspecialchars($correo, ENT_QUOTES, 'UTF-8');
-
-    // ── Validaciones ──────────────────────────────────────────────────────
-    if ($nombre === '' || $correo === '' || $password === '' || $confirmar === '') {
-        $error = $t['err_vacios'];
-
-    } elseif (!preg_match('/^[\p{L} ]{1,100}$/u', $nombre)) {
-        $error = $t['err_nombre'];
-
-    } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-        $error = $t['err_correo'];
-
-    } elseif (strlen($password) < 8) {
-        $error = $t['err_pass_corta'];
-
-    } elseif ($password !== $confirmar) {
-        $error = $t['err_pass_match'];
-
-    } else {
-        // ── Verificar correo duplicado (prepared statement) ───────────────
-        $chk = $conn->prepare("SELECT id FROM usuarios WHERE correo = ?");
-        $chk->bind_param("s", $correo);
-        $chk->execute();
-        $chk->store_result();
-
-        if ($chk->num_rows > 0) {
-            $error = $t['err_duplicado'];
-        } else {
-            // ── Insertar usuario ──────────────────────────────────────────
-            // RF-3: password_hash bcrypt; nombre saneado antes de persistir
-            $hash_pass    = password_hash($password, PASSWORD_DEFAULT);
-            $nombre_clean = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
-
-            $ins = $conn->prepare(
-                "INSERT INTO usuarios (nombre, correo, password, rol) VALUES (?, ?, ?, 'usuario')"
-            );
-            $ins->bind_param("sss", $nombre_clean, $correo, $hash_pass);
-
-            if ($ins->execute()) {
-                $success = true;
-            } else {
-                $error = $t['err_db'];
-            }
-            $ins->close();
-        }
-        $chk->close();
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="<?= $idioma ?>" data-theme="<?= htmlspecialchars($tema) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($t['titulo']) ?></title>
-
-    <!-- DaisyUI v5 + Tailwind (igual que el resto del proyecto) -->
+    <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-base-200">
+<body class="min-h-screen bg-base-200 p-6">
 
-<div class="card bg-base-100 shadow-xl p-8 w-full max-w-md mx-4 my-8">
+<div class="max-w-2xl mx-auto flex flex-col gap-5">
 
-    <!-- ── Encabezado ──────────────────────────────────────────────────── -->
-    <h1 class="text-2xl font-bold mb-1">
-        <?= htmlspecialchars($t['titulo']) ?>
-    </h1>
-    <p class="text-base-content/60 text-sm mb-6">
-        <?= htmlspecialchars($t['subtitulo']) ?>
-    </p>
-
-    <!-- ── Alerta de error ─────────────────────────────────────────────── -->
-    <?php if ($error !== ''): ?>
-    <div role="alert" class="alert alert-error mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <span><?= htmlspecialchars($error) ?></span>
+    <!-- ── Navbar / Header ───────────────────────────────────────────── -->
+    <div class="navbar bg-base-100 rounded-box shadow px-4">
+        <div class="flex-1">
+            <span class="text-lg font-bold">Dashboard</span>
+            <span class="badge badge-neutral ml-3"><?= $rol ?></span>
+        </div>
+        <div class="flex-none gap-2">
+            <a href="preferencias.php" class="btn btn-ghost btn-sm">⚙ Preferencias</a>
+            <a href="logout.php" class="btn btn-error btn-sm">Cerrar sesión</a>
+        </div>
     </div>
-    <?php endif; ?>
 
-    <!-- ── Alerta de éxito + botón directo al login ─────────────────────── -->
-    <?php if ($success): ?>
-    <div role="alert" class="alert alert-success mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <span><?= htmlspecialchars($t['ok_msg']) ?></span>
+    <!-- ── Bienvenida ────────────────────────────────────────────────── -->
+    <div class="card bg-base-100 shadow">
+        <div class="card-body py-5">
+            <h2 class="card-title text-xl">
+                Bienvenido, <?= $nombre ?>
+            </h2>
+            <p class="text-base-content/60 text-sm">
+                Sesión iniciada el <?= $inicio ?>
+            </p>
+        </div>
     </div>
-    <a href="login.php" class="btn btn-primary w-full">
-        <?= htmlspecialchars($t['ir_login_btn']) ?>
-    </a>
 
-    <?php else: ?>
+    <!-- ── Tarjetas de estadísticas ──────────────────────────────────── -->
+    <div class="grid grid-cols-2 gap-4">
 
-    <!-- ── Formulario de registro ───────────────────────────────────────── -->
-    <form method="POST" action="signup.php" novalidate class="flex flex-col gap-4">
-
-        <!-- Nombre completo -->
-        <div>
-            <label class="label pb-1">
-                <span class="label-text font-medium">
-                    <?= htmlspecialchars($t['lbl_nombre']) ?>
-                </span>
-            </label>
-            <input
-                type="text"
-                name="nombre"
-                placeholder="<?= htmlspecialchars($t['ph_nombre']) ?>"
-                value="<?= $val_nombre ?>"
-                class="input input-bordered w-full"
-                maxlength="100"
-                required
-                autocomplete="name"
-            >
+        <div class="card bg-base-100 shadow">
+            <div class="card-body items-center text-center gap-1 py-6">
+                <span class="text-3xl">👤</span>
+                <p class="text-xs text-base-content/50 uppercase tracking-wide mt-1">Usuario</p>
+                <p class="font-semibold"><?= $nombre ?></p>
+            </div>
         </div>
 
-        <!-- Correo electrónico -->
-        <div>
-            <label class="label pb-1">
-                <span class="label-text font-medium">
-                    <?= htmlspecialchars($t['lbl_correo']) ?>
-                </span>
-            </label>
-            <input
-                type="email"
-                name="correo"
-                placeholder="<?= htmlspecialchars($t['ph_correo']) ?>"
-                value="<?= $val_correo ?>"
-                class="input input-bordered w-full"
-                required
-                autocomplete="email"
-            >
+        <div class="card bg-base-100 shadow">
+            <div class="card-body items-center text-center gap-1 py-6">
+                <span class="text-3xl">🏷️</span>
+                <p class="text-xs text-base-content/50 uppercase tracking-wide mt-1">Rol</p>
+                <p class="font-semibold"><?= $rol ?></p>
+            </div>
         </div>
 
-        <!-- Contraseña -->
-        <div>
-            <label class="label pb-1">
-                <span class="label-text font-medium">
-                    <?= htmlspecialchars($t['lbl_pass']) ?>
-                </span>
-            </label>
-            <input
-                type="password"
-                name="password"
-                placeholder="<?= htmlspecialchars($t['ph_pass']) ?>"
-                class="input input-bordered w-full"
-                minlength="8"
-                required
-                autocomplete="new-password"
-            >
+        <div class="card bg-base-100 shadow">
+            <div class="card-body items-center text-center gap-1 py-6">
+                <span class="text-3xl">🕐</span>
+                <p class="text-xs text-base-content/50 uppercase tracking-wide mt-1">Sesión iniciada</p>
+                <p class="font-semibold text-sm"><?= $inicio ?></p>
+            </div>
         </div>
 
-        <!-- Confirmar contraseña -->
-        <div>
-            <label class="label pb-1">
-                <span class="label-text font-medium">
-                    <?= htmlspecialchars($t['lbl_confirmar']) ?>
-                </span>
-            </label>
-            <input
-                type="password"
-                name="confirmar"
-                placeholder="<?= htmlspecialchars($t['ph_confirmar']) ?>"
-                class="input input-bordered w-full"
-                minlength="8"
-                required
-                autocomplete="new-password"
-            >
+        <div class="card bg-primary text-primary-content shadow">
+            <div class="card-body items-center text-center gap-1 py-6">
+                <span class="text-3xl">🔢</span>
+                <p class="text-xs uppercase tracking-wide mt-1 opacity-70">Visitas</p>
+                <p class="font-bold text-4xl"><?= $visitas ?></p>
+            </div>
         </div>
 
-        <!-- Botón de envío -->
-        <button type="submit" class="btn btn-primary w-full mt-2">
-            <?= htmlspecialchars($t['btn_registrar']) ?>
-        </button>
-    </form>
+    </div>
 
-    <?php endif; ?>
-
-    <!-- ── Enlace al login ──────────────────────────────────────────────── -->
-    <p class="text-center text-sm text-base-content/60 mt-6">
-        <?= htmlspecialchars($t['ya_cuenta']) ?>
-        <a href="login.php" class="link link-primary font-medium">
-            <?= htmlspecialchars($t['ir_login']) ?>
-        </a>
-    </p>
+    <!-- ── Acciones rápidas ───────────────────────────────────────────── -->
+    <div class="flex gap-3">
+        <a href="preferencias.php" class="btn btn-outline flex-1">⚙ Preferencias</a>
+        <a href="logout.php"       class="btn btn-error flex-1">⏻ Cerrar sesión</a>
+    </div>
 
 </div>
 
