@@ -1,74 +1,83 @@
 <?php
 session_start();
 
-// RF-2: Proteger dashboard
-if (!isset($_SESSION['nombre'])) {
-    header("Location: login.php");
-    exit();
+// RF-2: Dashboard protegido; si no hay sesión redirigir a login
+if (!isset($_SESSION['usuario'])) {
+    header('Location: login.php');
+    exit;
 }
 
-// RF-2: Contador de visitas
-if (!isset($_SESSION['visitas'])) {
-    $_SESSION['visitas'] = 1;
-} else {
-    $_SESSION['visitas']++;
-}
+// RF-2: Contador de visitas a la página
+$_SESSION['visitas'] = ($_SESSION['visitas'] ?? 0) + 1;
 
-// RF-3: htmlspecialchars
-$nombre  = htmlspecialchars($_SESSION['nombre']);
+// RF-3: htmlspecialchars() en toda salida de datos de usuario
+$nombre  = htmlspecialchars($_SESSION['usuario']);
 $rol     = htmlspecialchars($_SESSION['rol']);
+$inicio  = htmlspecialchars($_SESSION['inicio']);
 $visitas = (int) $_SESSION['visitas'];
+
+// Leer preferencias de cookies
+$tema   = htmlspecialchars($_COOKIE['tema']   ?? 'claro');
+$idioma = htmlspecialchars($_COOKIE['idioma'] ?? 'es');
 ?>
 <!DOCTYPE html>
-<html lang="es" data-theme="customTheme">
+<html lang="<?= $idioma ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sesión y Cookies</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Clear+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="estilos.php">
 </head>
-<body>
-    <div class="hero bg-base-200 min-h-screen">
-        <div class="hero-content text-center">
-            <div class="max-w-md">
-                <div class="card w-96 bg-base-100 card-xl shadow-sm">
-                    <figure>
-                        <img
-                        src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                        alt="Shoes" />
-                    </figure>
-                    <div class="card-body">
-                        <h2 class="card-title">
-                            <?php echo $nombre; ?>
-                            <div class="badge badge-secondary"><?php echo $rol; ?></div>
-                        </h2>                    
-                        <p>Has visitado el sitio: <span id="visitCount"><?php echo $visitas; ?></span> veces</p>
-                        <a href="logout.php" class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl btn-soft btn-secondary">Cerrar Sesión</a>
-                    </div>
-                </div>
-                <div class="card-actions justify-end">
-                    <label class="toggle text-base-content">
-                        <input type="checkbox" value="synthwave" class="theme-controller" />
+<body class="tema-<?= $tema ?>">
 
-                        <svg aria-label="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></g></svg>
+<div class="contenedor">
 
-                        <svg aria-label="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></g></svg>
-
-                    </label> 
-                    <label class="swap">
-                        <input type="checkbox" />
-                        <div class="swap-on">EN</div>
-                        <div class="swap-off">ES</div>
-                    </label>
-                </div>
-            </div>      
+    <!-- RF-2: Bienvenida con nombre, rol y contador de visitas -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="subtitulo">
+                Bienvenido, <strong><?= $nombre ?></strong>
+                &mdash; Rol: <strong><?= $rol ?></strong>
+            </p>
         </div>
+        <a href="logout.php" class="btn btn-logout">Cerrar sesión</a>
+    </header>
+
+    <div class="tarjetas">
+
+        <div class="tarjeta">
+            <span class="icono">👤</span>
+            <h2>Usuario</h2>
+            <p><?= $nombre ?></p>
+        </div>
+
+        <div class="tarjeta">
+            <span class="icono">🏷️</span>
+            <h2>Rol</h2>
+            <p><?= $rol ?></p>
+        </div>
+
+        <div class="tarjeta">
+            <span class="icono">🕐</span>
+            <h2>Sesión iniciada</h2>
+            <p><?= $inicio ?></p>
+        </div>
+
+        <div class="tarjeta">
+            <span class="icono">🔢</span>
+            <h2>Visitas a esta página</h2>
+            <p class="numero-grande"><?= $visitas ?></p>
+        </div>
+
     </div>
+
+    <div class="botones" style="margin-top:2rem;">
+        <a href="preferencias.php" class="btn">Preferencias</a>
+        <a href="logout.php" class="btn btn-borrar">Cerrar sesión</a>
+    </div>
+
+</div>
+
 </body>
 </html>
